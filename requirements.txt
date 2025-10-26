@@ -1,7 +1,8 @@
-streamlit==1.32.0
-langchain==0.1.10
-langchain-groq==0.0.1
-langchain-mongodb==0.1.3
+streamlit
+langchain
+langchain-core
+langchain-groq
+langchain-mongodb
 langchain-community==0.0.24
 pymongo==4.6.2
 pypdf==4.0.1
