@@ -170,6 +170,7 @@ Provide a clear recommendation in 2-3 sentences."""
 def main():
     st.set_page_config(page_title="PragyanAI Sales Chatbot", layout="wide")
     st.title("🤖 PragyanAI Agentic Sales Chatbot")
+    st.image("PragyanAI_Transperent.png")
     st.markdown("*AI-Powered Student Engagement System*")
 
     if 'session_id' not in st.session_state:
