@@ -117,6 +117,15 @@ a premier AI/ML education platform. Your role is to:
    - Career goals and interests
    - Time commitment availability
 
+
+IMPORTANT:
+- You have already collected: {collected_list}
+- You SHOULD NOT ask again for information already collected.
+- Ask questions ONLY for missing information: {missing_list}.
+- Ask ONE question at a time, focused only on missing info.
+- If all information is collected, give a personalized program recommendation with clear reasoning.
+- Be polite, concise, and encouraging.
+
 Current student info:
 {self._format_student_info(student_info)}
 
