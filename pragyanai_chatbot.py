@@ -68,6 +68,7 @@ class RAGSystem:
         return "\n\n".join(doc.page_content for doc in docs)
 
 # --- Agent Core Logic ---
+# --- Agent Core Logic ---
 class PragyanAIAgent:
     def __init__(self):
         if not Config.GROQ_API_KEY:
@@ -75,7 +76,7 @@ class PragyanAIAgent:
         self.llm = ChatGroq(api_key=Config.GROQ_API_KEY, model_name=Config.MODEL_NAME, temperature=0.7)
         self.rag_system = RAGSystem()
         self.db_manager = MongoDBManager()
-        # This list defines the conversation flow
+        # This list defines the conversation flow as tuples (field_name, next_question)
         self.required_fields = [
             ("name", "Great to meet you! What is your email address?"),
             ("email", "Thanks. Could you provide your phone number?"),
@@ -105,11 +106,7 @@ class PragyanAIAgent:
 
 # --- Main Streamlit Application ---
 def main():
-    st.set_page_config(
-        page_title="PragyanAI Sales Chatbot",
-        page_icon="🤖",
-        layout="wide"
-    )
+    st.set_page_config(page_title="PragyanAI Sales Chatbot", page_icon="🤖", layout="wide")
     st.title("🤖 PragyanAI Agentic Sales Chatbot")
     st.markdown("*AI-Powered Student Engagement System*")
 
@@ -145,14 +142,12 @@ def main():
 
     with col2:
         st.subheader("📋 Student Information")
-        # CORRECTED LOOP: This correctly unpacks the field name and ignores the question part.
+        # This loop correctly unpacks the field name from the tuple
         for field, _ in agent.required_fields:
             value = st.session_state.student_info.get(field, "...")
             st.text(f"{field.replace('_', ' ').title()}: {value}")
 
-        # Check if all info is collected
         all_info_collected = all(field in st.session_state.student_info for field, _ in agent.required_fields)
-
         if all_info_collected:
             st.success("✅ All information collected!")
             if 'recommendation' not in st.session_state:
@@ -163,19 +158,16 @@ def main():
     with col1:
         st.subheader("💬 Chat")
 
-        # Display chat history
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-        # Initial greeting
         if not st.session_state.messages:
             greeting = "Hello! 👋 I'm your PragyanAI admissions assistant. To get started, may I have your full name?"
             st.session_state.messages.append({"role": "assistant", "content": greeting})
             chat_history.add_ai_message(greeting)
             st.rerun()
 
-        # Handle user input with state machine logic
         if user_input := st.chat_input("Type your message..."):
             st.session_state.messages.append({"role": "user", "content": user_input})
             chat_history.add_user_message(user_input)
@@ -187,14 +179,12 @@ def main():
                     field_to_collect = field
                     break
             
-            # Save the user's input to the correct field
             if field_to_collect:
                 st.session_state.student_info[field_to_collect] = user_input.strip()
 
             # Find the next question to ask
             ai_response = ""
             all_done = True
-            # CORRECTED LOOP: This correctly unpacks both field and question.
             for field, question in agent.required_fields:
                 if field not in st.session_state.student_info:
                     ai_response = question
@@ -203,7 +193,6 @@ def main():
             
             if all_done:
                 ai_response = "Thank you for providing all your details! I am now generating your personalized program recommendation on the right."
-                # Save the complete lead profile to DB
                 agent.db_manager.save_student_lead(
                     {**st.session_state.student_info, "session_id": st.session_state.session_id}
                 )
