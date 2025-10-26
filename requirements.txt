@@ -16,3 +16,4 @@ sentence-transformers
 python-dotenv==1.0.1
 transformers
 streamlit-pdf
+torch
