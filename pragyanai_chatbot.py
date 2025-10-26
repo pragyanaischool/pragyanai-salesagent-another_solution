@@ -122,24 +122,41 @@ class PragyanAIAgent:
         return response.content
 
 def main():
-    st.set_page_config(page_title="PragyanAI Sales Chatbot", page_icon="🤖", layout="wide")
+    st.set_page_config(
+        page_title="PragyanAI Sales Chatbot",
+        page_icon="🤖",
+        layout="wide"
+    )
     st.title("🤖 PragyanAI Agentic Sales Chatbot")
     st.markdown("*AI-Powered Student Engagement System*")
 
-    # Initialize session state variables
+    # --- MODIFIED: Robust Initialization with Error Handling ---
+    try:
+        if "agent" not in st.session_state:
+            st.session_state.agent = PragyanAIAgent()
+            st.session_state.agent.initialize_rag()
+        
+        # This is the crucial line that fixes the error.
+        # It ensures the 'agent' variable exists on every script rerun.
+        agent = st.session_state.agent
+
+    except (ValueError, FileNotFoundError) as e:
+        st.error(f"Initialization Failed: {e}")
+        st.stop() # Stop the app if the agent can't be created.
+    except Exception as e:
+        st.error(f"An unexpected error occurred during setup: {e}")
+        st.stop()
+    # --- END MODIFICATION ---
+
     if "session_id" not in st.session_state:
         st.session_state.session_id = f"session_{datetime.now().timestamp()}"
+
     if "student_info" not in st.session_state:
         st.session_state.student_info = {}
+
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "agent" not in st.session_state:
-        st.session_state.agent = PragyanAIAgent()
-        st.session_state.agent.initialize_rag()
-    
-    agent = st.session_state.agent
 
-    # Chat history setup
     chat_history = MongoDBChatMessageHistory(
         session_id=st.session_state.session_id,
         connection_string=Config.MONGODB_URI,
@@ -147,81 +164,91 @@ def main():
         collection_name=Config.CHAT_HISTORY_COLLECTION
     )
 
-    # --- UI Layout ---
     col1, col2 = st.columns([2, 1])
 
     with col2:
         st.subheader("📋 Student Information")
-        # Display collected information
-        for field, _ in agent.required_fields:
-            value = st.session_state.student_info.get(field, "...")
+        # This loop will now work correctly
+        for field in agent.required_fields:
+            value = st.session_state.student_info.get(field, "-")
             st.text(f"{field.replace('_', ' ').title()}: {value}")
 
-        # Check if all info is collected
-        all_info_collected = all(field in st.session_state.student_info for field, _ in agent.required_fields)
+        all_info_collected = all(field in st.session_state.student_info for field in agent.required_fields)
 
         if all_info_collected:
             st.success("✅ All information collected!")
-            if 'recommendation' not in st.session_state:
-                st.session_state.recommendation = agent.generate_program_recommendation(st.session_state.student_info)
-                # Save the complete lead profile to DB
+            if st.button("Generate Recommendation"):
+                rec = agent.generate_program_recommendation(st.session_state.student_info)
+                st.info(rec)
+                st.session_state.student_info['recommendation'] = rec
                 agent.db_manager.save_student_lead(
                     {**st.session_state.student_info, "session_id": st.session_state.session_id}
                 )
-            st.info(f"**Recommendation:**\n{st.session_state.recommendation}")
 
     with col1:
         st.subheader("💬 Chat")
 
-        # Display chat messages
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
-        
-        # Initial greeting if no messages exist
+
         if not st.session_state.messages:
             greeting = "Hello! 👋 I'm your PragyanAI admissions assistant. To get started, may I have your full name?"
             st.session_state.messages.append({"role": "assistant", "content": greeting})
             chat_history.add_ai_message(greeting)
-            st.rerun()
+            st.rerun() # Use st.rerun() instead of the custom safe_rerun
 
-        # Handle user input using a state machine logic
         if user_input := st.chat_input("Type your message..."):
-            # Add user message to state and history
             st.session_state.messages.append({"role": "user", "content": user_input})
             chat_history.add_user_message(user_input)
 
-            # Determine the next piece of info we need
-            next_field_to_collect = None
-            for field, _ in agent.required_fields:
+            # --- MODIFIED: Simplified information collection logic ---
+            # Determine which question we are waiting for an answer to
+            current_question_field = None
+            next_question = ""
+            all_done = True
+            
+            for field in agent.required_fields:
                 if field not in st.session_state.student_info:
-                    next_field_to_collect = field
+                    current_question_field = field
+                    all_done = False
                     break
             
-            # If we were waiting for info, save the user's input to that field
-            if next_field_to_collect:
-                st.session_state.student_info[next_field_to_collect] = user_input.strip()
+            # If we were waiting for an answer, save the user's input
+            if current_question_field:
+                st.session_state.student_info[current_question_field] = user_input.strip()
 
-            # Now, determine the next question to ask
-            ai_response = ""
-            final_question_answered = False
-            for field, question in agent.required_fields:
-                if field not in st.session_state.student_info:
-                    ai_response = question
-                    break
-            else: # This 'else' belongs to the for loop, runs if loop completes without break
-                ai_response = "Thank you for providing all your details! I'm generating a personalized recommendation for you now. You can see it on the right."
-                final_question_answered = True
+                # Find the next question to ask
+                next_field_found = False
+                for field in agent.required_fields:
+                    if field not in st.session_state.student_info:
+                        # This is a bit complex, might need a rethink, but let's go with a simple LLM call for now.
+                        next_field_found = True
+                        break
+                
+                if not next_field_found:
+                    all_done = True
 
-            # Add AI response to state and history
+            if all_done:
+                 # Now that all info is collected, generate recommendation and save lead
+                recommendation = agent.generate_program_recommendation(st.session_state.student_info)
+                ai_response = f"Thank you for providing all your details! Here is my recommendation for you:\n\n{recommendation}"
+                st.session_state.student_info['recommendation'] = recommendation
+                agent.db_manager.save_student_lead({**st.session_state.student_info, "session_id": st.session_state.session_id})
+
+            else:
+                # Use the LLM to ask the next question conversationally
+                context = agent.rag_system.get_relevant_context(user_input)
+                system_prompt = agent.get_system_prompt(st.session_state.student_info, context)
+                messages_for_groq = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input}
+                ]
+                response = agent.llm.invoke(messages_for_groq)
+                ai_response = response.content
+
             st.session_state.messages.append({"role": "assistant", "content": ai_response})
             chat_history.add_ai_message(ai_response)
-            
-            # If the last piece of info was just collected, save the lead
-            if final_question_answered:
-                agent.db_manager.save_student_lead(
-                     {**st.session_state.student_info, "session_id": st.session_state.session_id}
-                )
 
             st.rerun()
 
