@@ -21,7 +21,7 @@ class Config:
     COLLECTION_NAME = "student_leads"
     CHAT_HISTORY_COLLECTION = "chat_histories"
     PDF_DIRECTORY = "./program_docs"  # Make sure to place your PDFs here
-    MODEL_NAME = "llama-3.1-70b-versatile"
+    MODEL_NAME = "llama-3.3-70b-versatile"
 
 
 # MongoDB handler class
