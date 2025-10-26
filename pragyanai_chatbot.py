@@ -166,6 +166,14 @@ Provide a clear recommendation in 2-3 sentences."""
         response = self.llm.invoke([HumanMessage(content=prompt)])
         return response.content
 
+def safe_rerun():
+    try:
+        st.experimental_rerun()
+    except AttributeError:
+        # In case experimental_rerun is not available,
+        # simply do nothing or warn the user.
+        pass
+
 # Streamlit App
 def main():
     st.set_page_config(page_title="PragyanAI Sales Chatbot", layout="wide")
@@ -255,7 +263,7 @@ def main():
             st.session_state.messages.append({"role": "assistant", "content": response.content + "\n\n" + follow_up})
             chat_history.add_ai_message(response.content + "\n\n" + follow_up)
 
-            st.experimental_rerun()
+            safe_rerun()
 
 if __name__ == "__main__":
     main()
