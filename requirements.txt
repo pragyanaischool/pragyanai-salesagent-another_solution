@@ -1,12 +1,18 @@
 streamlit
+pandas
+numpy
+# --- LangChain Core Packages ---
 langchain
-langchain-core
+langchain-core==0.2.3
 langchain-groq
 langchain-mongodb
-langchain-community==0.0.24
-pymongo==4.6.2
-pypdf==4.0.1
-faiss-cpu==1.8.0
-sentence-transformers==2.5.1
+langchain-community==0.2.1
+langchain-text-splitters
+groq
+pymongo
+pypdf==4.2.0
+faiss-cpu
+sentence-transformers
 python-dotenv==1.0.1
-transformers==4.38.2
+transformers
+streamlit-pdf
