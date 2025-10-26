@@ -19,7 +19,8 @@ class Config:
     COLLECTION_NAME = "student_leads"
     CHAT_HISTORY_COLLECTION = "chat_histories"
     PDF_DIRECTORY = "./program_docs"
-    MODEL_NAME = "llama3-70b-8192"
+    MODEL_NAME = "llama-3.3-70b-versatile"
+
 
 # --- MongoDB Manager ---
 class MongoDBManager:
