@@ -5,7 +5,6 @@ from typing import Dict, Optional
 import streamlit as st
 from langchain_groq import ChatGroq
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
-from langchain.schema import HumanMessage, SystemMessage
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -13,18 +12,17 @@ from langchain_community.vectorstores import FAISS
 from pymongo import MongoClient
 import re
 
-# Config class to hold constants
+# Configuration
 class Config:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", st.secrets.get("GROQ_API_KEY", ""))
     MONGODB_URI = os.getenv("MONGODB_URI", st.secrets.get("MONGODB_URI", ""))
     DATABASE_NAME = "pragyanai_sales"
     COLLECTION_NAME = "student_leads"
     CHAT_HISTORY_COLLECTION = "chat_histories"
-    PDF_DIRECTORY = "./program_docs"  # Make sure to place your PDFs here
+    PDF_DIRECTORY = "./program_docs"  # Place your PragyanAI program PDFs here
     MODEL_NAME = "llama-3.3-70b-versatile"
 
-
-# MongoDB handler class
+# MongoDB manager
 class MongoDBManager:
     def __init__(self):
         if not Config.MONGODB_URI:
@@ -39,8 +37,7 @@ class MongoDBManager:
         result = self.leads_collection.insert_one(student_data)
         return str(result.inserted_id)
 
-
-# RAG system for PDF knowledge base
+# RAG System
 class RAGSystem:
     def __init__(self):
         self.embeddings = HuggingFaceEmbeddings(
@@ -51,7 +48,7 @@ class RAGSystem:
 
     def load_and_process_pdfs(self, pdf_directory: str):
         if not os.path.exists(pdf_directory):
-            raise FileNotFoundError(f"PDF directory '{pdf_directory}' not found.")
+            raise FileNotFoundError(f"PDF directory '{pdf_directory}' does not exist.")
         loader = DirectoryLoader(
             pdf_directory,
             glob="**/*.pdf",
@@ -73,8 +70,7 @@ class RAGSystem:
         docs = self.retriever.get_relevant_documents(query)
         return "\n\n".join(doc.page_content for doc in docs)
 
-
-# Main Agent handling conversation and logic
+# Agent core logic
 class PragyanAIAgent:
     def __init__(self):
         if not Config.GROQ_API_KEY:
@@ -104,31 +100,31 @@ a premier AI/ML education platform. Your role is to:
    - Academic Score/CGPA
 
 2. EXPLAIN WHY AI/ML IS VALUABLE:
-   - Emphasize AI's transformative impact across industries
-   - Highlight career opportunities and salary potential
-   - Share real-world applications and success stories
+   - The transformative impact of AI in industries
+   - Career opportunities and salary potential
+   - Real-world applications and success stories
 
 3. PRESENT PRAGYANAI PROGRAMS:
    - Generative AI Bootcamp (Beginners to Advanced)
-   - Agentic AI Workshop (Advanced automation & agents)
-   - Machine Learning Foundations (Core ML concepts)
-   - Deep Learning Specialization (Neural networks & CV/NLP)
-   - End-to-End MLOps (Deployment & production systems)
+   - Agentic AI Workshop (Automation & Agents)
+   - Machine Learning Foundations
+   - Deep Learning Specialization (CV/NLP)
+   - End-to-End MLOps
 
 4. RECOMMEND THE BEST PROGRAM based on:
-   - Current academic level and branch
-   - Prior programming/AI experience
+   - Academic level & branch
+   - Prior programming & AI experience
    - Career goals and interests
-   - Available time commitment
+   - Time commitment availability
 
-CURRENT STUDENT INFORMATION:
+Current student info:
 {self._format_student_info(student_info)}
 
-KNOWLEDGE BASE CONTEXT:
+Knowledge base context:
 {context}
 
-Be conversational, encouraging, and ask ONE question at a time. When you have all information, 
-provide a personalized program recommendation with clear reasoning."""
+Be friendly and ask one question at a time. After gathering all info, provide a personalized program recommendation with clear reasoning.
+"""
         return base_prompt
 
     def _format_student_info(self, info: Dict) -> str:
@@ -140,8 +136,6 @@ provide a personalized program recommendation with clear reasoning."""
 
     def extract_information(self, message: str, current_info: Dict) -> Dict:
         updates = {}
-
-        # Basic regex patterns to extract email, phone, score
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         phone_pattern = r'\b(?:\+91|91)?[\s-]?[6-9]\d{9}\b'
         score_pattern = r'\b(?:cgpa|gpa|score|percentage)[\s:]*(\d+\.?\d*)\b'
@@ -161,7 +155,6 @@ provide a personalized program recommendation with clear reasoning."""
             if score_match:
                 updates['academic_score'] = score_match.group(1)
 
-        # Could add more heuristic extraction logic here, e.g. for name/college/branch/semester
         return updates
 
     def determine_next_question(self, student_info: Dict) -> Optional[str]:
@@ -172,7 +165,8 @@ provide a personalized program recommendation with clear reasoning."""
 
     def generate_program_recommendation(self, student_info: Dict) -> str:
         context = self.rag_system.get_relevant_context(
-            f"Program recommendation for {student_info.get('branch', 'engineering')} student in semester {student_info.get('semester', 'N/A')}"
+            f"Program recommendation for {student_info.get('branch', 'engineering')} "
+            f"student in semester {student_info.get('semester', 'N/A')}"
         )
 
         prompt = f"""Based on this student profile, recommend the BEST PragyanAI program:
@@ -194,7 +188,9 @@ Context from knowledge base:
 
 Provide a specific recommendation with reasoning in 2-3 sentences."""
 
-        response = self.llm.invoke([HumanMessage(content=prompt)])
+        response = self.llm.invoke([
+            {"role": "user", "content": prompt}
+        ])
         return response.content
 
 
@@ -212,24 +208,22 @@ def main():
         layout="wide"
     )
     st.title("🤖 PragyanAI Agentic Sales Chatbot")
-    st.image("PragyanAI_Transperent.png")
     st.markdown("*AI-Powered Student Engagement System*")
 
-    if 'session_id' not in st.session_state:
+    if "session_id" not in st.session_state:
         st.session_state.session_id = f"session_{datetime.now().timestamp()}"
 
-    if 'student_info' not in st.session_state:
+    if "student_info" not in st.session_state:
         st.session_state.student_info = {}
 
-    if 'messages' not in st.session_state:
+    if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    if 'agent' not in st.session_state:
+    if "agent" not in st.session_state:
         agent = PragyanAIAgent()
         agent.initialize_rag()
         st.session_state.agent = agent
 
-    # MongoDB chat history
     chat_history = MongoDBChatMessageHistory(
         session_id=st.session_state.session_id,
         connection_string=Config.MONGODB_URI,
@@ -237,7 +231,7 @@ def main():
         collection_name=Config.CHAT_HISTORY_COLLECTION
     )
 
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([2,1])
 
     with col2:
         st.subheader("📋 Student Information")
@@ -275,15 +269,16 @@ def main():
             extracted = st.session_state.agent.extract_information(user_input, st.session_state.student_info)
             st.session_state.student_info.update(extracted)
 
-            next_question = st.session_state.agent.determine_next_question(st.session_state.student_info)
-
             context = st.session_state.agent.rag_system.get_relevant_context(user_input)
             system_prompt = st.session_state.agent.get_system_prompt(st.session_state.student_info, context)
 
-            response = st.session_state.agent.llm.invoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_input)
-            ])
+            # IMPORTANT: Convert messages to dict format for Groq
+            messages_for_groq = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+
+            response = st.session_state.agent.llm.invoke(messages_for_groq)
 
             st.session_state.messages.append({"role": "assistant", "content": response.content})
             chat_history.add_ai_message(response.content)
@@ -293,4 +288,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
