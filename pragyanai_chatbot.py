@@ -123,7 +123,6 @@ class PragyanAIAgent:
            - Career goals and interests
            - Time commitment availability
         
-        
         IMPORTANT:
         - You have already collected: {collected_list}
         - You SHOULD NOT ask again for information already collected.
@@ -141,6 +140,7 @@ class PragyanAIAgent:
         Be friendly and ask one question at a time. After gathering all info, provide a personalized program recommendation with clear reasoning.
         """
         return base_prompt
+
 
     def _format_student_info(self, info: Dict) -> str:
         lines = []
