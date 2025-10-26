@@ -18,8 +18,8 @@ python-dotenv==1.0.1
 streamlit-pdf
 #torch
 # RAG Components
-# Pinning these versions resolves the 'meta tensor' issue
-torch==2.1.2
-sentence-transformers==2.2.2
-transformers==4.36.2
-accelerate==0.26.1
+# requirements.txt (Corrected)
+torch
+sentence-transformers
+transformers
+accelerate
