@@ -105,7 +105,11 @@ class PragyanAIAgent:
 
 # --- Main Streamlit Application ---
 def main():
-    st.set_page_config(page_title="PragyanAI Sales Chatbot", page_icon="🤖", layout="wide")
+    st.set_page_config(
+        page_title="PragyanAI Sales Chatbot",
+        page_icon="🤖",
+        layout="wide"
+    )
     st.title("🤖 PragyanAI Agentic Sales Chatbot")
     st.markdown("*AI-Powered Student Engagement System*")
 
@@ -141,11 +145,14 @@ def main():
 
     with col2:
         st.subheader("📋 Student Information")
+        # CORRECTED LOOP: This correctly unpacks the field name and ignores the question part.
         for field, _ in agent.required_fields:
             value = st.session_state.student_info.get(field, "...")
             st.text(f"{field.replace('_', ' ').title()}: {value}")
 
+        # Check if all info is collected
         all_info_collected = all(field in st.session_state.student_info for field, _ in agent.required_fields)
+
         if all_info_collected:
             st.success("✅ All information collected!")
             if 'recommendation' not in st.session_state:
@@ -187,6 +194,7 @@ def main():
             # Find the next question to ask
             ai_response = ""
             all_done = True
+            # CORRECTED LOOP: This correctly unpacks both field and question.
             for field, question in agent.required_fields:
                 if field not in st.session_state.student_info:
                     ai_response = question
